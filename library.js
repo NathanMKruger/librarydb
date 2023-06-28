@@ -45,23 +45,25 @@ class Library {
     
     async addBook(info) {
         const collection = await this.collection()
-
-        if (!(info instanceof Object)) throw Error("Incorrect data type. Takes object")
-
-        await collection.insertOne(info)
-        console.log("Book successfully added")
+        
+        if (!(info instanceof Object)) throw Error("Info takes an object data type")
+        if (!info.title || !info.author || !info.copies) throw Error(".title .author and .copies are required")
+        return collection.insertOne(info) && "Book added"
     }
 
     async changeBook(id, newInfo) {
-        const mongoId = new ObjectId(id)
-        const collection = await this.collection()
-        const infoObj = { $set: newInfo }
-        const result = await collection.updateOne({ _id: mongoId }, infoObj)
-
-        if (result.modifiedCount === 0) return "Nothing to delete"
-
-        console.log("Book successfully updated")
-        return result
+        try {
+            const mongoId = { _id: ObjectId(id) }
+            const infoObj = { $set: newInfo }
+            const collection = await this.collection()
+            const result = await collection.updateOne(mongoId, infoObj)
+            // Handles non-existent id
+            if (result.matchedCount === 0) throw Error("ID not found")
+        } catch(err) {
+            // Handles malformed id
+            if (err.name === "BSONTypeError") console.log("Incorrect ID type")
+            console.log(err)
+        }
     }
 
     async removeBook(id) {
